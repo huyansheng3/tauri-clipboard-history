@@ -69,3 +69,8 @@ jobs:
             - macOS 用户：选择 .dmg 文件
           releaseDraft: true
           prerelease: false
+
+      - name: Install WiX
+        if: matrix.platform == 'windows-latest'
+        run: |
+          nuget install WiX -Version 3.11.2
