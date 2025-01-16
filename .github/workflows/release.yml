@@ -73,6 +73,22 @@ jobs:
         run: |
           nuget install WiX -Version 3.11.2
 
+      - name: Build the app
+        uses: tauri-apps/tauri-action@dev
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: '剪贴板历史记录 v${{ env.VERSION }}'
+          releaseBody: |
+            剪贴板历史记录工具新版本发布！
+
+            ### 下载
+            - Windows 用户：选择 .exe 文件
+            - macOS 用户：选择 .dmg 文件
+          releaseDraft: true
+          prerelease: false
+
       - name: Upload Release Assets (Windows)
         if: matrix.platform == 'windows-latest'
         uses: actions/upload-release-asset@v1
@@ -80,7 +96,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./src-tauri/target/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
+          asset_path: src-tauri/target/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
           asset_name: 剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
           asset_content_type: application/vnd.microsoft.portable-executable
 
@@ -91,6 +107,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./src-tauri/target/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_aarch64.dmg
-          asset_name: 剪贴板历史记录_${{ env.VERSION }}_aarch64.dmg
+          asset_path: src-tauri/target/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_x64.dmg
+          asset_name: 剪贴板历史记录_${{ env.VERSION }}_x64.dmg
           asset_content_type: application/x-apple-diskimage
+
+      - name: List Build Output (Debug)
+        run: |
+          if [ "$RUNNER_OS" == "Windows" ]; then
+            dir src-tauri\target\release\bundle\nsis\
+          else
+            ls -la src-tauri/target/release/bundle/dmg/
+          fi
+        shell: bash
