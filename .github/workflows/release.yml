@@ -96,7 +96,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ${{ github.workspace }}/src-tauri/target/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
+          asset_path: src-tauri/target/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
           asset_name: 剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
           asset_content_type: application/vnd.microsoft.portable-executable
 
@@ -113,13 +113,19 @@ jobs:
 
       - name: Upload Release Assets (macOS APP)
         if: matrix.platform == 'macos-latest'
+        run: |
+          cd src-tauri/target/release/bundle/macos
+          tar -czf 剪贴板历史记录_${{ env.VERSION }}_aarch64.app.tar.gz 剪贴板历史记录.app
+
+      - name: Upload macOS APP Archive
+        if: matrix.platform == 'macos-latest'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/macos/剪贴板历史记录.app
-          asset_name: 剪贴板历史记录_${{ env.VERSION }}.app
+          asset_path: src-tauri/target/release/bundle/macos/剪贴板历史记录_${{ env.VERSION }}_aarch64.app.tar.gz
+          asset_name: 剪贴板历史记录_${{ env.VERSION }}_aarch64.app.tar.gz
           asset_content_type: application/gzip
 
       - name: List Build Output (Debug)
