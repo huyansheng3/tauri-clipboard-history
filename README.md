@@ -1,5 +1,5 @@
-# Your App Name
+# 剪切板记录器
 
 [![Release](https://github.com/username/repo-name/actions/workflows/release.yml/badge.svg)](https://github.com/username/repo-name/actions/workflows/release.yml)
 
-应用描述...
+![example](./example.png)

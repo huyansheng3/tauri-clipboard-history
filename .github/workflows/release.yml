@@ -48,12 +48,6 @@ jobs:
         with:
           workspaces: './src-tauri -> target'
 
-      - name: Install dependencies (ubuntu only)
-        if: matrix.platform == 'ubuntu-latest'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf
-
       - name: Install frontend dependencies
         run: pnpm install
 
@@ -63,7 +57,12 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'App v__VERSION__'
-          releaseBody: 'See the assets to download and install this version.'
+          releaseName: '剪贴板历史记录 v__VERSION__'
+          releaseBody: |
+            剪贴板历史记录工具新版本发布！
+
+            ### 下载
+            - Windows 用户：选择 .msi 或 .exe 文件
+            - macOS 用户：选择 .dmg 文件
           releaseDraft: true
           prerelease: false
