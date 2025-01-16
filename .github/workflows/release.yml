@@ -55,6 +55,14 @@ jobs:
         run: pnpm install
 
       - name: Get version
+        if: matrix.platform == 'windows-latest'
+        shell: pwsh
+        run: |
+          echo "VERSION=$((Get-Content package.json | ConvertFrom-Json).version)" >> $env:GITHUB_ENV
+
+      - name: Get version
+        if: matrix.platform == 'macos-latest'
+        shell: bash
         run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
 
       - name: Create Release
@@ -88,6 +96,12 @@ jobs:
             - macOS 用户：选择 .dmg 文件
           releaseDraft: true
           prerelease: false
+
+      - name: List Build Output (Debug)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          ls src-tauri/target/release/bundle/nsis/
+        shell: bash
 
       - name: Upload Release Assets (Windows)
         if: matrix.platform == 'windows-latest'
@@ -127,12 +141,3 @@ jobs:
           asset_path: src-tauri/target/release/bundle/macos/剪贴板历史记录_${{ env.VERSION }}_aarch64.app.tar.gz
           asset_name: 剪贴板历史记录_${{ env.VERSION }}_aarch64.app.tar.gz
           asset_content_type: application/gzip
-
-      - name: List Build Output (Debug)
-        run: |
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            dir src-tauri\target\release\bundle\nsis\
-          else
-            ls -la src-tauri/target/release/bundle/dmg/
-          fi
-        shell: bash
