@@ -1,6 +1,6 @@
 {
   "name": "tauri-app",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "private": true,
   "description": "",
   "type": "module",
@@ -9,7 +9,8 @@
     "dev": "vite",
     "build": "vite build",
     "serve": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "bump": "./scripts/bump-version.sh"
   },
   "license": "MIT",
   "dependencies": {
