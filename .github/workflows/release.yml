@@ -54,23 +54,43 @@ jobs:
       - name: Install frontend dependencies
         run: pnpm install
 
-      - name: Build the app
-        uses: tauri-apps/tauri-action@dev
+      - name: Get version
+        run: echo "VERSION=$(node -p "require('./package.json').version")" >> $GITHUB_ENV
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tagName: ${{ github.ref_name }}
-          releaseName: '剪贴板历史记录 v__VERSION__'
-          releaseBody: |
-            剪贴板历史记录工具新版本发布！
-
-            ### 下载
-            - Windows 用户：选择 .msi 或 .exe 文件
-            - macOS 用户：选择 .dmg 文件
-          releaseDraft: true
+          tag_name: ${{ github.ref_name }}
+          release_name: 剪贴板历史记录 v${{ env.VERSION }}
+          draft: true
           prerelease: false
 
       - name: Install WiX
         if: matrix.platform == 'windows-latest'
         run: |
           nuget install WiX -Version 3.11.2
+
+      - name: Upload Release Assets (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./src-tauri/target/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
+          asset_name: 剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
+          asset_content_type: application/vnd.microsoft.portable-executable
+
+      - name: Upload Release Assets (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./src-tauri/target/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_aarch64.dmg
+          asset_name: 剪贴板历史记录_${{ env.VERSION }}_aarch64.dmg
+          asset_content_type: application/x-apple-diskimage
