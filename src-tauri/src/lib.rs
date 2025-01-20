@@ -15,6 +15,7 @@ pub struct ClipboardEntry {
 struct ClipboardState {
     history: Vec<ClipboardEntry>,
     last_content: String,
+    search_query: String,
 }
 
 impl ClipboardState {
@@ -22,6 +23,7 @@ impl ClipboardState {
         Self {
             history: Vec::new(),
             last_content: String::new(),
+            search_query: String::new(),
         }
     }
 }
@@ -39,6 +41,25 @@ fn get_clipboard_history() -> Vec<ClipboardEntry> {
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
+}
+
+// 添加新的搜索命令
+#[tauri::command]
+fn search_clipboard_history(query: String) -> Vec<ClipboardEntry> {
+    let mut state = CLIPBOARD_STATE.lock();
+    state.search_query = query.clone();
+    
+    // 如果搜索词为空,返回所有历史记录
+    if query.is_empty() {
+        return state.history.clone();
+    }
+    
+    // 否则过滤包含搜索词的记录
+    state.history
+        .iter()
+        .filter(|entry| entry.content.to_lowercase().contains(&query.to_lowercase()))
+        .cloned()
+        .collect()
 }
 
 fn start_clipboard_monitor() {
@@ -73,7 +94,11 @@ pub fn run() {
     
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet, get_clipboard_history])
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            get_clipboard_history,
+            search_clipboard_history
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

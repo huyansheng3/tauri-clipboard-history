@@ -42,6 +42,29 @@
   color: #2c3e50;
 }
 
+.header-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-input {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  background-color: #fff;
+  color: #4a5568;
+  font-size: 0.9rem;
+  min-width: 200px;
+  transition: all 0.2s ease;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #cbd5e1;
+  box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.1);
+}
+
 .sort-button {
   display: flex;
   align-items: center;
@@ -181,5 +204,16 @@
   .sort-button:hover {
     background-color: #404040;
     border-color: #525252;
+  }
+
+  .search-input {
+    background-color: #333333;
+    border-color: #404040;
+    color: #e2e8f0;
+  }
+
+  .search-input:focus {
+    border-color: #525252;
+    box-shadow: 0 0 0 2px rgba(66, 153, 225, 0.2);
   }
 }

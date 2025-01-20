@@ -13,16 +13,32 @@ function App() {
     ClipboardEntry[]
   >([]);
   const [isDescending, setIsDescending] = createSignal(true); // 默认倒序（最新的在上面）
+  const [searchQuery, setSearchQuery] = createSignal(''); // 新增
+  const [isSearching, setIsSearching] = createSignal(false); // 新增
 
-  // 定期获取剪贴板历史
+  // 修改获取历史记录的逻辑
   createEffect(() => {
     const intervalId = setInterval(async () => {
-      const history = await invoke<ClipboardEntry[]>('get_clipboard_history');
-      setClipboardHistory(history);
+      // 只有在不搜索时才自动刷新
+      if (!isSearching()) {
+        const history = await invoke<ClipboardEntry[]>('get_clipboard_history');
+        setClipboardHistory(history);
+      }
     }, 1000);
 
     return () => clearInterval(intervalId);
   });
+
+  // 新增搜索处理函数
+  const handleSearch = async (value: string) => {
+    setSearchQuery(value);
+    setIsSearching(!!value);
+
+    const results = await invoke<ClipboardEntry[]>('search_clipboard_history', {
+      query: value,
+    });
+    setClipboardHistory(results);
+  };
 
   const sortedHistory = () => {
     const history = [...clipboardHistory()];
@@ -37,14 +53,24 @@ function App() {
     <main class="container">
       <div class="header">
         <h1>剪贴板历史记录</h1>
-        <button
-          class="sort-button"
-          onClick={toggleSort}
-          title={isDescending() ? '当前最新在上' : '当前最早在上'}
-        >
-          <FaSolidSort />
-          {isDescending() ? '最新在上' : '最早在上'}
-        </button>
+        <div class="header-controls">
+          {/* 新增搜索框 */}
+          <input
+            type="search"
+            class="search-input"
+            placeholder="搜索剪贴板内容..."
+            value={searchQuery()}
+            onInput={(e) => handleSearch(e.currentTarget.value)}
+          />
+          <button
+            class="sort-button"
+            onClick={toggleSort}
+            title={isDescending() ? '当前最新在上' : '当前最早在上'}
+          >
+            <FaSolidSort />
+            {isDescending() ? '最新在上' : '最早在上'}
+          </button>
+        </div>
       </div>
 
       <div class="clipboard-history">
