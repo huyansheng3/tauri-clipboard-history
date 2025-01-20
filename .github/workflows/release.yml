@@ -16,7 +16,7 @@ jobs:
         include:
           - platform: macos-latest
             target: x86_64-apple-darwin
-            arch: intel
+            arch: x64
           - platform: macos-latest
             target: aarch64-apple-darwin
             arch: arm64
@@ -133,7 +133,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_${{ matrix.arch }}.dmg
+          asset_path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_${{ if eq(matrix.target, 'x86_64-apple-darwin') }}x64${{ else }}aarch64${{ endif }}.dmg
           asset_name: clipboard_history_${{ env.VERSION }}_${{ matrix.arch }}.dmg
           asset_content_type: application/x-apple-diskimage
 
