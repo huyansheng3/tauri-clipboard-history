@@ -3,8 +3,22 @@ import { invoke } from '@tauri-apps/api/core';
 import './App.css';
 import { FaSolidSort } from 'solid-icons/fa';
 
+interface EmojiImage {
+  data: string;
+  position: number;
+}
+
+interface ClipboardContent {
+  type: 'Text' | 'Image' | 'RichText';
+  content?: string;
+  data?: string;
+  width?: number;
+  height?: number;
+  emoji_images?: EmojiImage[];
+}
+
 interface ClipboardEntry {
-  content: string;
+  content: ClipboardContent;
   timestamp: string;
 }
 
@@ -49,6 +63,51 @@ function App() {
     setIsDescending(!isDescending());
   };
 
+  const renderContent = (content: ClipboardContent) => {
+    switch (content.type) {
+      case 'Text':
+        return (
+          <div class="content text-content">
+            <pre class="text-pre">{content.content}</pre>
+          </div>
+        );
+      case 'RichText':
+        return (
+          <div class="content rich-text-content">
+            {content.content?.split(/(\[微信表情\])/).map((part, index) => {
+              if (part === '[微信表情]') {
+                const emoji = content.emoji_images?.find(
+                  (e) => e.position === content.content?.indexOf(part, index),
+                );
+                return emoji ? (
+                  <img src={emoji.data} alt="emoji" class="inline-emoji" />
+                ) : (
+                  part
+                );
+              }
+              return <span>{part}</span>;
+            })}
+          </div>
+        );
+      case 'Image':
+        return (
+          <div class="content image-content">
+            <img
+              src={content.data}
+              alt="Clipboard image"
+              style={{
+                'max-width': '100%',
+                'max-height': '300px',
+                'object-fit': 'contain',
+              }}
+            />
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
   return (
     <main class="container">
       <div class="header">
@@ -81,12 +140,19 @@ function App() {
                 <span class="timestamp">{entry.timestamp}</span>
                 <button
                   class="copy-button"
-                  onClick={() => navigator.clipboard.writeText(entry.content)}
+                  onClick={() => {
+                    if (entry.content.type === 'Text') {
+                      navigator.clipboard.writeText(
+                        entry.content.content || '',
+                      );
+                    }
+                  }}
+                  disabled={entry.content.type === 'Image'}
                 >
-                  复制
+                  {entry.content.type === 'Text' ? '复制' : '无法复制图片'}
                 </button>
               </div>
-              <div class="content">{entry.content}</div>
+              {renderContent(entry.content)}
             </div>
           )}
         </For>
