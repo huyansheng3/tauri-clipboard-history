@@ -29,4 +29,5 @@ lazy_static = "1.4"
 image = "0.24"
 base64 = "0.21"
 regex = "1.5"
+directories = "5.0"
 

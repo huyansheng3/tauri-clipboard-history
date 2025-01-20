@@ -1,15 +1,19 @@
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 use arboard::{Clipboard, ImageData};
 use base64::{engine::general_purpose::STANDARD as BASE64, Engine};
-use chrono::Local;
+use chrono::{Local, DateTime, Duration as ChronoDuration};
 use image::{ImageBuffer, Rgba, ImageEncoder};
 use parking_lot::Mutex;
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use std::{sync::Arc, thread, time::Duration};
 use regex::Regex;
 use lazy_static::lazy_static;
+use std::fs;
+use std::path::PathBuf;
+use tauri::Manager;
+use directories;
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub enum ClipboardContent {
     Text { content: String },
@@ -24,14 +28,14 @@ pub enum ClipboardContent {
     },
 }
 
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ClipboardEntry {
     content: ClipboardContent,
     timestamp: String,
 }
 
 // 新增：表情图片结构
-#[derive(Debug, Serialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct EmojiImage {
     data: String,     // base64 图片数据
     position: usize,  // 在文本中的位置
@@ -47,12 +51,96 @@ struct ClipboardState {
 
 impl ClipboardState {
     fn new() -> Self {
-        Self {
-            history: Vec::new(),
-            last_text_content: String::new(),
-            last_image_hash: 0,
-            search_query: String::new(),
+        // 尝试从文件加载历史记录
+        if let Some(saved_history) = Self::load_history() {
+            saved_history
+        } else {
+            Self {
+                history: Vec::new(),
+                last_text_content: String::new(),
+                last_image_hash: 0,
+                search_query: String::new(),
+            }
         }
+    }
+
+    // 添加保存历史记录的方法
+    fn save_history(&self) {
+        if let Some(data_dir) = get_app_data_dir() {
+            let history_file = data_dir.join("clipboard_history.json");
+            
+            // 将历史记录转换为 JSON
+            if let Ok(json) = serde_json::to_string(&self.history) {
+                // 确保目录存在
+                if let Err(e) = fs::create_dir_all(&data_dir) {
+                    eprintln!("Failed to create data directory: {}", e);
+                    return;
+                }
+                
+                // 写入文件
+                if let Err(e) = fs::write(&history_file, json) {
+                    eprintln!("Failed to save history: {}", e);
+                }
+            }
+        }
+    }
+
+    // 添加加载历史记录的方法
+    fn load_history() -> Option<Self> {
+        if let Some(data_dir) = get_app_data_dir() {
+            let history_file = data_dir.join("clipboard_history.json");
+            
+            // 尝试读取文件
+            if let Ok(content) = fs::read_to_string(&history_file) {
+                if let Ok(history) = serde_json::from_str::<Vec<ClipboardEntry>>(&content) {
+                    return Some(Self {
+                        history,
+                        last_text_content: String::new(),
+                        last_image_hash: 0,
+                        search_query: String::new(),
+                    });
+                }
+            }
+        }
+        None
+    }
+
+    // 修改添加记录的方法
+    fn add_entry(&mut self, entry: ClipboardEntry) {
+        self.history.push(entry);
+        self.save_history(); // 每次添加记录时保存
+    }
+
+    // 修改清理方法
+    fn cleanup_old_records(&mut self) {
+        let now = Local::now();
+        let one_day_ago = now - ChronoDuration::hours(24);
+        
+        let original_len = self.history.len();
+        self.history.retain(|entry| {
+            if let Ok(entry_time) = DateTime::parse_from_str(
+                &format!("{} +0000", entry.timestamp),
+                "%Y-%m-%d %H:%M:%S %z"
+            ) {
+                entry_time.naive_local() > one_day_ago.naive_local()
+            } else {
+                true
+            }
+        });
+        
+        // 如果有记录被删除，保存更新后的历史
+        if self.history.len() != original_len {
+            self.save_history();
+        }
+    }
+}
+
+// 修改 get_app_data_dir 函数
+fn get_app_data_dir() -> Option<PathBuf> {
+    if let Some(proj_dirs) = directories::ProjectDirs::from("com", "tauri-app", "clipboard") {
+        Some(proj_dirs.data_dir().to_path_buf())
+    } else {
+        None
     }
 }
 
@@ -128,21 +216,27 @@ fn process_clipboard_text(clipboard: &mut Clipboard) -> Option<ClipboardContent>
     }
 }
 
-// 修改监控函数
+// 修改监控函数，添加定期清理
 fn start_clipboard_monitor() {
     thread::spawn(|| {
         let mut clipboard = Clipboard::new().unwrap();
+        let mut last_cleanup = Local::now();
         
         loop {
             let mut state = CLIPBOARD_STATE.lock();
             
-            // 处理剪贴板内容
+            let now = Local::now();
+            if (now - last_cleanup).num_minutes() >= 60 {
+                state.cleanup_old_records();
+                last_cleanup = now;
+            }
+            
             if let Some(content) = process_clipboard_text(&mut clipboard) {
                 match &content {
                     ClipboardContent::Text { content: text } => {
                         if text != &state.last_text_content {
                             state.last_text_content = text.clone();
-                            state.history.push(ClipboardEntry {
+                            state.add_entry(ClipboardEntry {
                                 content,
                                 timestamp: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                             });
@@ -151,7 +245,7 @@ fn start_clipboard_monitor() {
                     ClipboardContent::RichText { content: text, .. } => {
                         if text != &state.last_text_content {
                             state.last_text_content = text.clone();
-                            state.history.push(ClipboardEntry {
+                            state.add_entry(ClipboardEntry {
                                 content,
                                 timestamp: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
                             });
@@ -161,23 +255,20 @@ fn start_clipboard_monitor() {
                 }
             }
             
-            // 处理纯图片
             if let Ok(image) = clipboard.get_image() {
                 let image_hash = calculate_image_hash(&image);
                 if image_hash != state.last_image_hash {
                     state.last_image_hash = image_hash;
                     
                     if let Some(base64) = image_to_base64(&image) {
-                        let entry = ClipboardEntry {
+                        state.add_entry(ClipboardEntry {
                             content: ClipboardContent::Image {
                                 data: base64,
                                 width: image.width,
                                 height: image.height,
                             },
                             timestamp: Local::now().format("%Y-%m-%d %H:%M:%S").to_string(),
-                        };
-                        
-                        state.history.push(entry);
+                        });
                     }
                 }
             }

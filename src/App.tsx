@@ -111,7 +111,6 @@ function App() {
   return (
     <main class="container">
       <div class="header">
-        <h1>剪贴板历史记录</h1>
         <div class="header-controls">
           {/* 新增搜索框 */}
           <input
