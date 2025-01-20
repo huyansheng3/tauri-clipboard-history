@@ -54,6 +54,8 @@ jobs:
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -108,21 +110,20 @@ jobs:
           prerelease: false
           args: --target ${{ matrix.target }}
 
-      - name: List Build Output (Debug)
+      - name: List NSIS directory
         if: matrix.platform == 'windows-latest'
-        run: |
-          ls src-tauri/target/release/bundle/nsis/
+        run: ls src-tauri/target/${{ matrix.target }}/release/bundle/nsis/
         shell: bash
 
-      - name: Upload Release Assets (Windows)
+      - name: Upload Release Asset (Windows)
         if: matrix.platform == 'windows-latest'
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
-          asset_name: 剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
+          asset_path: src-tauri/target/${{ matrix.target }}/release/bundle/nsis/剪贴板历史记录_${{ env.VERSION }}_x64-setup.exe
+          asset_name: clipboard_history_${{ env.VERSION }}_x64-setup.exe
           asset_content_type: application/vnd.microsoft.portable-executable
 
       - name: Upload Release Assets (macOS DMG)
@@ -132,14 +133,14 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_${{ matrix.arch }}.dmg
+          asset_path: src-tauri/target/${{ matrix.target }}/release/bundle/dmg/剪贴板历史记录_${{ env.VERSION }}_${{ matrix.arch }}.dmg
           asset_name: clipboard_history_${{ env.VERSION }}_${{ matrix.arch }}.dmg
           asset_content_type: application/x-apple-diskimage
 
       - name: Upload Release Assets (macOS APP)
         if: contains(matrix.platform, 'macos')
         run: |
-          cd src-tauri/target/release/bundle/macos
+          cd src-tauri/target/${{ matrix.target }}/release/bundle/macos
           tar -czf clipboard_history_${{ env.VERSION }}_${{ matrix.arch }}.app.tar.gz 剪贴板历史记录.app
 
       - name: Upload macOS APP Archive
@@ -149,6 +150,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: src-tauri/target/release/bundle/macos/clipboard_history_${{ env.VERSION }}_${{ matrix.arch }}.app.tar.gz
+          asset_path: src-tauri/target/${{ matrix.target }}/release/bundle/macos/clipboard_history_${{ env.VERSION }}_${{ matrix.arch }}.app.tar.gz
           asset_name: clipboard_history_${{ env.VERSION }}_${{ matrix.arch }}.app.tar.gz
           asset_content_type: application/gzip
